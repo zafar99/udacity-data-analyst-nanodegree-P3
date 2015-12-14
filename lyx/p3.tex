@@ -1,0 +1,466 @@
+%% LyX 2.0.8.1 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{listings}
+\usepackage{babel}
+\begin{document}
+\vfill{}
+
+
+
+\title{\textbf{P3 -- OpenStreetMap Project:}\\
+\textbf{Data Wrangling with MongoDB}\\
+\textit{Map Area: Lexington, KY}}
+
+
+\author{James Wheaton}
+
+
+\date{December 14th, 2015}
+
+\maketitle
+\newpage{}
+
+\tableofcontents{}\newpage{}
+
+
+\section{Problems Encountered in the Map}
+
+After downloading the Map Zen dataset for Lexington, Kentucky, I audited
+the data using some techniques from Problem Set 6. The following data
+inconsistencies were noticed:
+\begin{itemize}
+\item Abbreviated street names
+\item Inconsistent capitalization
+\item Data entry problems with ZIP codes
+\item Data entry problems with street name
+\end{itemize}
+
+\subsection{Abbreviated Street Names}
+
+Using the regular expression to detect the street type, I audited
+the street names to find abbreviated or irregular street types. I
+used the \texttt{expected} array of street types from Problem Set
+6, and then updated it with more street types that are present in
+the Lexington area. I cross-referenced strange street names like ``Esplanade''
+and ``Headley Green'' with Google Maps. A subsequent run returned
+the following problems:
+
+\begin{lstlisting}
+{'120': set(['Versailles Road #120']),
+ '168': set(['West Lowry Lane #168']),
+ '600': set(['East Vine Street, Suite 600']),
+ 'Ave': set(['524 Angliana Ave']),
+ 'Ave.': set(['E. Euclid Ave.']),
+ 'Blvd': set(["Man o' War Blvd", 'Polo Club Blvd']),
+ 'Blvd.': set(['Martin Luther King Blvd.']),
+ 'Courth': set(['Deltino Courth']),
+ 'Ct': set(['Belfair Ct']),
+ 'DR': set(['NEEDLERUSH DR']),
+ 'Dr': set(['Beaumont Circle Dr', 'Nichols Park Dr', 'Parkway Dr']),
+ 'Dr.': set(['Southland Dr.', 'Tates Creek Centre Dr.', 'Walden Dr.']),
+ 'Ln': set(['Norman Ln', 'W Lowry Ln', 'W. Lowry Ln']),
+ 'NE': set(['New Circle Road NE']),
+ 'Rd': set(['E New Circle Rd', 'East Reynolds Rd', ...]),
+ 'Rd.': set(['Redding Rd.', 'Tates Creek Rd.', 'W. New Circle Rd.']),
+ 'St': set(['E Main St', 'E. Main St', 'Jefferson St']),
+ 'St.': set(['N. Limestone St.', 'S Limestone St.']),
+ 'Ter': set(['Columbia Ter']),
+ 'broadway': set(['North broadway']),
+ 'drive': set(['cooper drive'])}
+\end{lstlisting}
+
+
+The apartment/suite numbers are fine and will be fixed. One spelling
+error was found: ``Courth'' should be ``Court.'' The abbreviations,
+including the cardinal direction abbreviations, will be replaced with
+their full word equivalents.
+
+
+\subsection{Inconsistent Capitalization}
+
+From the above street name audit, street names were found which are
+in all caps or all lowercase. An updating function will be run over
+the street names to properly capitalize them.
+
+With the following query, a Mongo query was ran to visually inspect
+all the street names and find any other problems:
+
+\texttt{db.lexington\_orig.aggregate({[}\{\$group: \{ \_id: \textquotedbl{}\$address.street\textquotedbl{}\}\}{]})}
+
+Some examples of inconsistent capitalization are: ``south Broadway,''
+``meijer Way,'' and ``west Main Street.''
+
+
+\subsection{Data entry problems with ZIP codes}
+
+A Mongo query was ran to inspect the ZIP (postal) codes for this area.
+
+\texttt{db.lexington\_orig.aggregate({[}\{\$match: \{\textquotedbl{}address\textquotedbl{}:\{\$exists:1\}\}\},
+\{\$group: \{ \_id: \textquotedbl{}\$address.postcode\textquotedbl{},
+count: \{\$sum: 1\}\}\}, \{\$sort: \{ count: 1\}\}{]})}
+
+The results show that there is one ZIP code entered as ``KY'' (Kentucky,
+the state) and 297 entries with no ZIP code (\texttt{null}). Adding
+the ZIP codes is out of the scope of this project: it would require
+checking the address against USPS or Google Maps API.
+
+There are ZIP codes which include the extra four numbers. We will
+ignore these and assume they are correct. Perhaps these could be split
+into another field for better consistency and ease of querying.
+
+
+\subsection{Data entry problems with street name}
+
+One error was found with the street names where the house number was
+included in \texttt{addr:street}, for ``524 Angliana Avenue.'' This
+was fixed by removing ``524 `` from the street name and moving it
+to \texttt{housenumber}.
+
+
+\section{Data Overview}
+
+This section contains basic statistics about the dataset and the MongoDB
+queries used to gather them.
+
+
+\subsection{File Sizes}
+
+\texttt{lexington\_kentucky.osm ........ 66 MB}
+
+\noindent \texttt{lexington\_kentucky.osm.json ... 72 MB}
+
+
+\subsection{Number of documents}
+
+\texttt{> db.lexington\_orig.find().count()}
+
+\noindent \texttt{346737}
+
+
+\subsection{Number of nodes}
+
+\texttt{> db.lexington\_orig.find(\{''type'':''node''\}).count()}
+
+\noindent \texttt{320817}
+
+
+\subsection{Number of ways}
+
+\texttt{> db.lexington\_orig.find(\{''type'':''way''\}).count()}
+
+\noindent \texttt{25920}
+
+
+\subsection{Number of unique users}
+
+\texttt{> db.lexington\_orig.distinct(''created.user'').length}
+
+\noindent \texttt{537}
+
+
+\subsection{Top 1 contributing user}
+
+\texttt{> db.lexington\_orig.aggregate({[}\{\$group: \{ \_id: \textquotedbl{}\$created.user\textquotedbl{},
+count: \{ \$sum: 1 \}\}\}, \{\$sort: \{ \textquotedbl{}count\textquotedbl{}: -1\}\},
+\{\$limit: 1\}{]})}
+
+\noindent \texttt{{[} \{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}woodpeck\_fixbot\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 175583 \} {]}}
+
+
+\subsection{Number of users appearing only once (having 1 post)}
+
+\texttt{> db.lexington\_orig.aggregate({[}\{\$group: \{ \_id: \textquotedbl{}\$created.user\textquotedbl{},
+count: \{ \$sum: 1 \}\}\}, \{\$group: \{\_id: \textquotedbl{}\$count\textquotedbl{},
+num\_users: \{\$sum:1\}\}\}, \{\$sort: \{ \_id: 1\}\}, \{\$limit: 1\}{]})}
+
+\noindent \texttt{{[} \{ \textquotedbl{}\_id\textquotedbl{} : 1, \textquotedbl{}num\_users\textquotedbl{}
+: 90 \} {]}}
+
+\noindent \texttt{\# ``\_id'' represents postcount}
+
+
+\section{Additional Ideas}
+
+
+\subsection{Top 10 appearing amenities}
+
+\texttt{> db.lexington.aggregate({[}\{\$match: \{\textquotedbl{}amenity\textquotedbl{}:\{\$exists:1\}\}\},
+\{\$group: \{\_id: \textquotedbl{}\$amenity\textquotedbl{}, count: \{\$sum:1\}\}\},
+\{\$sort: \{count: -1\}\}, \{\$limit: 10\}{]})}~\\
+
+
+\noindent \texttt{{[} \{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}parking\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 546 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}restaurant\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 376 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}place\_of\_worship\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 171 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}bicycle\_parking\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 129 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}fast\_food\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 115 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}school\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 110 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}fuel\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 88 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}university\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 82 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}bank\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 69 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}cafe\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 40 \} {]}}~\\
+
+
+An interesting insight from this data: this city seems to be bicycle-friendly,
+judging by the number of bicycle parking places.
+
+
+\subsection{Top 10 cuisines available}
+
+\texttt{> db.lexington.aggregate({[}\{\$match: \{\textquotedbl{}cuisine\textquotedbl{}:\{\$exists:1\}\}\},
+\{\$group: \{\_id: \textquotedbl{}\$cuisine\textquotedbl{}, count: \{\$sum:1\}\}\},
+\{\$sort: \{count: -1\}\}, \{\$limit: 10\}{]})}\\
+
+
+\noindent \texttt{{[} \{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}burger\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 39 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}american\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 38 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}sandwich\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 25 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}mexican\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 23 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}pizza\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 22 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}coffee\_shop\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 18 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}regional\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 18 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}ice\_cream\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 18 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}italian\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 15 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}chinese\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 13 \} {]}}
+
+
+\subsection{Banks available}
+
+\texttt{> db.lexington.aggregate({[}\{\$match: \{\textquotedbl{}amenity\textquotedbl{}:\textquotedbl{}bank\textquotedbl{}\}\},
+\{\$group: \{\_id: \textquotedbl{}\$name\textquotedbl{}, count: \{\$sum:1\}\}\},
+\{\$sort: \{count: -1\}\}{]})}~\\
+
+
+\noindent \texttt{{[} \{ \textquotedbl{}\_id\textquotedbl{} : null,
+\textquotedbl{}count\textquotedbl{} : 16 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Fifth
+Third Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 6
+\},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Chase\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 4 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}PNC
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 3 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Chase
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 3 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Central
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 3 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Whitaker
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 3 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Kentucky
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 2 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Farmer's
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 2 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}US
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 2 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}5/3
+Bank ATM\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 2 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}PNC\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}United
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Branch
+Banking and Trust Company\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Republic
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}First
+State Financial\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}First
+State Financial Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}American
+Founders Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Peoples
+Exchange Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}UK
+Credit Union ATM\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}BB\&T
+ATM\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Greater
+Kentucky Credit Union Inc.\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Wells
+Fargo\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Bank
+of the Bluegrass \& Trust Co.\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Peoples
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Republic\textquotedbl{},
+\textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Greater
+Kentucky Credit Union, Inc.\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Traditional
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Forcht
+Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}University
+of Kentucky Federal Credit Union\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Republic
+Bank \& Trust\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}City
+National Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Central
+Bank (Drive-Thru)\textquotedbl{}, \textquotedbl{}count\textquotedbl{}
+: 1 \},}
+
+\noindent \texttt{\{ \textquotedbl{}\_id\textquotedbl{} : \textquotedbl{}Community
+Trust Bank\textquotedbl{}, \textquotedbl{}count\textquotedbl{} : 1
+\} {]}}~\\
+
+
+This result shows some naming inconsistencies, e.g. ``Republic Bank,''
+``Republic,'' and ``Republic Bank \& Trust.''
+
+
+\subsection{Determining a bicycle-friendly score of Lexington}
+
+The data revealed there are a large number of bicycle parking facilities
+in Lexington. This fact agrees with my intuition that college campus
+cities have more bicyclists.
+
+As a hypothetical person wanting to move to Lexington without a car,
+I would want to know how bicycle-friendly this city is. I would want
+ample access to bicycle parking, lanes, and repair stations.
+
+The OpenStreetMap data includes information about bicycle parking,
+including what type, e.g. stand, loops, rack, etc. It also includes
+details about the bicycle repair stations, e.g. whether they have
+a chain tool available or not. Unfortunately, I see a limited amount
+of data about bicycle lanes on the streets, compared to the number
+of ways.\\
+
+
+\noindent \texttt{> db.lexington.find(\{\textquotedbl{}bicycle\textquotedbl{}:\textquotedbl{}yes\textquotedbl{}\}).count()}
+
+\noindent \texttt{221}
+
+\noindent \texttt{> db.lexington.find(\{\textquotedbl{}bicycle\textquotedbl{}:\textquotedbl{}no\textquotedbl{}\}).count()}
+
+\noindent \texttt{119}
+
+\noindent \texttt{> db.lexington.find(\{\textquotedbl{}bicycle\textquotedbl{}:\{\$exists:1\}\}).count()}
+
+\noindent \texttt{341}
+
+\noindent \texttt{> db.lexington.distinct(\textquotedbl{}bicycle\textquotedbl{})}
+
+\noindent \texttt{{[} \textquotedbl{}no\textquotedbl{}, \textquotedbl{}yes\textquotedbl{},
+\textquotedbl{}dismount\textquotedbl{} {]}}
+
+\noindent \texttt{> db.lexington.aggregate({[}\{\$match: \{\textquotedbl{}type\textquotedbl{}:\textquotedbl{}way\textquotedbl{}\}\},
+\{\$group: \{\_id: \textquotedbl{}\$name\textquotedbl{}, count: \{\$sum:1\}\}\},
+\{\$sort: \{count: -1\}\}{]}).result.length}
+
+\noindent \texttt{7908 \# 341/7908 = 4.3\%}\\
+
+
+We could map out all bicycle-related places over Lexington, with special
+icons for each, using OpenStreetMap or Google Maps API. This would
+provide a useful visualization for the user.
+
+A bicycle-friendly city score could be calculated by figuring the
+number of bicycle parking or repair stations within each square mile
+(density) of Lexington. The densities could be summed and normalized
+to a 0-100 score. This score would only be calculable and useful when
+the same process is done for other cities in America.
+
+
+\section{Conclusion}
+
+The cleanliness of this dataset was no worse than expected. The usual
+errors suggested by the Problem Set 6 were present, e.g. street type
+abbreviations. Unsurprisingly, some place names were inconsistent,
+and would require fixing by hand. There was a large number of ZIP
+codes missing which can be fixed using a program tied with the USPS
+address verification API. The user ``woodpeck\_fixbot'' was the
+most active in this area, where the same user appeared as \#2 in the
+sample project (Charlotte, NC)
+
+The Lexington area OSM data is off to a good start, with details such
+as whether a bicycle repair station has a chain repair tool, bicycle
+lanes, and number of lanes. I would have to investigate further into
+OSM to see what other types of data can be entered.
+\end{document}

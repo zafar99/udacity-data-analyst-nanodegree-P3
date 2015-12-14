@@ -1,0 +1,1255 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\float_placement h
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset VSpace vfill
+\end_inset
+
+
+\end_layout
+
+\begin_layout Title
+
+\series bold
+P3 -- OpenStreetMap Project:
+\begin_inset Newline newline
+\end_inset
+
+Data Wrangling with MongoDB
+\begin_inset Newline newline
+\end_inset
+
+
+\series default
+\shape italic
+Map Area: Lexington, KY
+\end_layout
+
+\begin_layout Author
+James Wheaton
+\end_layout
+
+\begin_layout Date
+December 14th, 2015
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Problems Encountered in the Map
+\end_layout
+
+\begin_layout Standard
+After downloading the Map Zen dataset for Lexington, Kentucky, I audited
+ the data using some techniques from Problem Set 6.
+ The following data inconsistencies were noticed:
+\end_layout
+
+\begin_layout Itemize
+Abbreviated street names
+\end_layout
+
+\begin_layout Itemize
+Inconsistent capitalization
+\end_layout
+
+\begin_layout Itemize
+Data entry problems with ZIP codes
+\end_layout
+
+\begin_layout Itemize
+Data entry problems with street name
+\end_layout
+
+\begin_layout Subsection
+Abbreviated Street Names
+\end_layout
+
+\begin_layout Standard
+Using the regular expression to detect the street type, I audited the street
+ names to find abbreviated or irregular street types.
+ I used the 
+\family typewriter
+expected
+\family default
+ array of street types from Problem Set 6, and then updated it with more
+ street types that are present in the Lexington area.
+ I cross-referenced strange street names like 
+\begin_inset Quotes eld
+\end_inset
+
+Esplanade
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+Headley Green
+\begin_inset Quotes erd
+\end_inset
+
+ with Google Maps.
+ A subsequent run returned the following problems:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+{'120': set(['Versailles Road #120']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ '168': set(['West Lowry Lane #168']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ '600': set(['East Vine Street, Suite 600']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Ave': set(['524 Angliana Ave']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Ave.': set(['E.
+ Euclid Ave.']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Blvd': set(["Man o' War Blvd", 'Polo Club Blvd']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Blvd.': set(['Martin Luther King Blvd.']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Courth': set(['Deltino Courth']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Ct': set(['Belfair Ct']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'DR': set(['NEEDLERUSH DR']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Dr': set(['Beaumont Circle Dr', 'Nichols Park Dr', 'Parkway Dr']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Dr.': set(['Southland Dr.', 'Tates Creek Centre Dr.', 'Walden Dr.']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Ln': set(['Norman Ln', 'W Lowry Ln', 'W.
+ Lowry Ln']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'NE': set(['New Circle Road NE']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Rd': set(['E New Circle Rd', 'East Reynolds Rd', ...]),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Rd.': set(['Redding Rd.', 'Tates Creek Rd.', 'W.
+ New Circle Rd.']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'St': set(['E Main St', 'E.
+ Main St', 'Jefferson St']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'St.': set(['N.
+ Limestone St.', 'S Limestone St.']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'Ter': set(['Columbia Ter']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'broadway': set(['North broadway']),
+\end_layout
+
+\begin_layout Plain Layout
+
+ 'drive': set(['cooper drive'])}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The apartment/suite numbers are fine and will be fixed.
+ One spelling error was found: 
+\begin_inset Quotes eld
+\end_inset
+
+Courth
+\begin_inset Quotes erd
+\end_inset
+
+ should be 
+\begin_inset Quotes eld
+\end_inset
+
+Court.
+\begin_inset Quotes erd
+\end_inset
+
+ The abbreviations, including the cardinal direction abbreviations, will
+ be replaced with their full word equivalents.
+\end_layout
+
+\begin_layout Subsection
+Inconsistent Capitalization
+\end_layout
+
+\begin_layout Standard
+From the above street name audit, street names were found which are in all
+ caps or all lowercase.
+ An updating function will be run over the street names to properly capitalize
+ them.
+\end_layout
+
+\begin_layout Standard
+With the following query, a Mongo query was ran to visually inspect all
+ the street names and find any other problems:
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+db.lexington_orig.aggregate([{$group: { _id: "$address.street"}}])
+\end_layout
+
+\begin_layout Standard
+Some examples of inconsistent capitalization are: 
+\begin_inset Quotes eld
+\end_inset
+
+south Broadway,
+\begin_inset Quotes erd
+\end_inset
+
+ 
+\begin_inset Quotes eld
+\end_inset
+
+meijer Way,
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+west Main Street.
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Data entry problems with ZIP codes
+\end_layout
+
+\begin_layout Standard
+A Mongo query was ran to inspect the ZIP (postal) codes for this area.
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+db.lexington_orig.aggregate([{$match: {"address":{$exists:1}}}, {$group: {
+ _id: "$address.postcode", count: {$sum: 1}}}, {$sort: { count: 1}}])
+\end_layout
+
+\begin_layout Standard
+The results show that there is one ZIP code entered as 
+\begin_inset Quotes eld
+\end_inset
+
+KY
+\begin_inset Quotes erd
+\end_inset
+
+ (Kentucky, the state) and 297 entries with no ZIP code (
+\family typewriter
+null
+\family default
+).
+ Adding the ZIP codes is out of the scope of this project: it would require
+ checking the address against USPS or Google Maps API.
+\end_layout
+
+\begin_layout Standard
+There are ZIP codes which include the extra four numbers.
+ We will ignore these and assume they are correct.
+ Perhaps these could be split into another field for better consistency
+ and ease of querying.
+\end_layout
+
+\begin_layout Subsection
+Data entry problems with street name
+\end_layout
+
+\begin_layout Standard
+One error was found with the street names where the house number was included
+ in 
+\family typewriter
+addr:street
+\family default
+, for 
+\begin_inset Quotes eld
+\end_inset
+
+524 Angliana Avenue.
+\begin_inset Quotes erd
+\end_inset
+
+ This was fixed by removing 
+\begin_inset Quotes eld
+\end_inset
+
+524 
+\begin_inset Quotes eld
+\end_inset
+
+ from the street name and moving it to 
+\family typewriter
+housenumber
+\family default
+.
+\end_layout
+
+\begin_layout Section
+Data Overview
+\end_layout
+
+\begin_layout Standard
+This section contains basic statistics about the dataset and the MongoDB
+ queries used to gather them.
+\end_layout
+
+\begin_layout Subsection
+File Sizes
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+lexington_kentucky.osm ........
+ 66 MB
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+lexington_kentucky.osm.json ...
+ 72 MB
+\end_layout
+
+\begin_layout Subsection
+Number of documents
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.find().count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+346737
+\end_layout
+
+\begin_layout Subsection
+Number of nodes
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.find({
+\begin_inset Quotes erd
+\end_inset
+
+type
+\begin_inset Quotes erd
+\end_inset
+
+:
+\begin_inset Quotes erd
+\end_inset
+
+node
+\begin_inset Quotes erd
+\end_inset
+
+}).count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+320817
+\end_layout
+
+\begin_layout Subsection
+Number of ways
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.find({
+\begin_inset Quotes erd
+\end_inset
+
+type
+\begin_inset Quotes erd
+\end_inset
+
+:
+\begin_inset Quotes erd
+\end_inset
+
+way
+\begin_inset Quotes erd
+\end_inset
+
+}).count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+25920
+\end_layout
+
+\begin_layout Subsection
+Number of unique users
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.distinct(
+\begin_inset Quotes erd
+\end_inset
+
+created.user
+\begin_inset Quotes erd
+\end_inset
+
+).length
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+537
+\end_layout
+
+\begin_layout Subsection
+Top 1 contributing user
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.aggregate([{$group: { _id: "$created.user", count: { $sum:
+ 1 }}}, {$sort: { "count": -1}}, {$limit: 1}])
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ { "_id" : "woodpeck_fixbot", "count" : 175583 } ]
+\end_layout
+
+\begin_layout Subsection
+Number of users appearing only once (having 1 post)
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington_orig.aggregate([{$group: { _id: "$created.user", count: { $sum:
+ 1 }}}, {$group: {_id: "$count", num_users: {$sum:1}}}, {$sort: { _id: 1}},
+ {$limit: 1}])
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ { "_id" : 1, "num_users" : 90 } ]
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+# 
+\begin_inset Quotes eld
+\end_inset
+
+_id
+\begin_inset Quotes erd
+\end_inset
+
+ represents postcount
+\end_layout
+
+\begin_layout Section
+Additional Ideas
+\end_layout
+
+\begin_layout Subsection
+Top 10 appearing amenities
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington.aggregate([{$match: {"amenity":{$exists:1}}}, {$group: {_id:
+ "$amenity", count: {$sum:1}}}, {$sort: {count: -1}}, {$limit: 10}])
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ { "_id" : "parking", "count" : 546 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "restaurant", "count" : 376 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "place_of_worship", "count" : 171 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "bicycle_parking", "count" : 129 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "fast_food", "count" : 115 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "school", "count" : 110 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "fuel", "count" : 88 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "university", "count" : 82 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "bank", "count" : 69 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "cafe", "count" : 40 } ]
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+An interesting insight from this data: this city seems to be bicycle-friendly,
+ judging by the number of bicycle parking places.
+\end_layout
+
+\begin_layout Subsection
+Top 10 cuisines available
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington.aggregate([{$match: {"cuisine":{$exists:1}}}, {$group: {_id:
+ "$cuisine", count: {$sum:1}}}, {$sort: {count: -1}}, {$limit: 10}])
+\family default
+
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ { "_id" : "burger", "count" : 39 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "american", "count" : 38 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "sandwich", "count" : 25 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "mexican", "count" : 23 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "pizza", "count" : 22 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "coffee_shop", "count" : 18 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "regional", "count" : 18 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "ice_cream", "count" : 18 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "italian", "count" : 15 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "chinese", "count" : 13 } ]
+\end_layout
+
+\begin_layout Subsection
+Banks available
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+> db.lexington.aggregate([{$match: {"amenity":"bank"}}, {$group: {_id: "$name",
+ count: {$sum:1}}}, {$sort: {count: -1}}])
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ { "_id" : null, "count" : 16 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Fifth Third Bank", "count" : 6 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Chase", "count" : 4 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "PNC Bank", "count" : 3 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Chase Bank", "count" : 3 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Central Bank", "count" : 3 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Whitaker Bank", "count" : 3 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Kentucky Bank", "count" : 2 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Farmer's Bank", "count" : 2 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "US Bank", "count" : 2 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "5/3 Bank ATM", "count" : 2 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "PNC", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "United Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Branch Banking and Trust Company", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Republic Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "First State Financial", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "First State Financial Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "American Founders Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Peoples Exchange Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "UK Credit Union ATM", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "BB&T ATM", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Greater Kentucky Credit Union Inc.", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Wells Fargo", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Bank of the Bluegrass & Trust Co.", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Peoples Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Republic", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Greater Kentucky Credit Union, Inc.", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Traditional Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Forcht Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "University of Kentucky Federal Credit Union", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Republic Bank & Trust", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "City National Bank", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Central Bank (Drive-Thru)", "count" : 1 },
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+{ "_id" : "Community Trust Bank", "count" : 1 } ]
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This result shows some naming inconsistencies, e.g.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Republic Bank,
+\begin_inset Quotes erd
+\end_inset
+
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Republic,
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+Republic Bank & Trust.
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Determining a bicycle-friendly score of Lexington
+\end_layout
+
+\begin_layout Standard
+The data revealed there are a large number of bicycle parking facilities
+ in Lexington.
+ This fact agrees with my intuition that college campus cities have more
+ bicyclists.
+\end_layout
+
+\begin_layout Standard
+As a hypothetical person wanting to move to Lexington without a car, I would
+ want to know how bicycle-friendly this city is.
+ I would want ample access to bicycle parking, lanes, and repair stations.
+\end_layout
+
+\begin_layout Standard
+The OpenStreetMap data includes information about bicycle parking, including
+ what type, e.g.
+ stand, loops, rack, etc.
+ It also includes details about the bicycle repair stations, e.g.
+ whether they have a chain tool available or not.
+ Unfortunately, I see a limited amount of data about bicycle lanes on the
+ streets, compared to the number of ways.
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+> db.lexington.find({"bicycle":"yes"}).count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+221
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+> db.lexington.find({"bicycle":"no"}).count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+119
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+> db.lexington.find({"bicycle":{$exists:1}}).count()
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+341
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+> db.lexington.distinct("bicycle")
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+[ "no", "yes", "dismount" ]
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+> db.lexington.aggregate([{$match: {"type":"way"}}, {$group: {_id: "$name",
+ count: {$sum:1}}}, {$sort: {count: -1}}]).result.length
+\end_layout
+
+\begin_layout Standard
+\noindent
+
+\family typewriter
+7908 # 341/7908 = 4.3%
+\family default
+
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We could map out all bicycle-related places over Lexington, with special
+ icons for each, using OpenStreetMap or Google Maps API.
+ This would provide a useful visualization for the user.
+\end_layout
+
+\begin_layout Standard
+A bicycle-friendly city score could be calculated by figuring the number
+ of bicycle parking or repair stations within each square mile (density)
+ of Lexington.
+ The densities could be summed and normalized to a 0-100 score.
+ This score would only be calculable and useful when the same process is
+ done for other cities in America.
+\end_layout
+
+\begin_layout Section
+Conclusion
+\end_layout
+
+\begin_layout Standard
+The cleanliness of this dataset was no worse than expected.
+ The usual errors suggested by the Problem Set 6 were present, e.g.
+ street type abbreviations.
+ Unsurprisingly, some place names were inconsistent, and would require fixing
+ by hand.
+ There was a large number of ZIP codes missing which can be fixed using
+ a program tied with the USPS address verification API.
+ The user 
+\begin_inset Quotes eld
+\end_inset
+
+woodpeck_fixbot
+\begin_inset Quotes erd
+\end_inset
+
+ was the most active in this area, where the same user appeared as #2 in
+ the sample project (Charlotte, NC)
+\end_layout
+
+\begin_layout Standard
+The Lexington area OSM data is off to a good start, with details such as
+ whether a bicycle repair station has a chain repair tool, bicycle lanes,
+ and number of lanes.
+ I would have to investigate further into OSM to see what other types of
+ data can be entered.
+\end_layout
+
+\end_body
+\end_document
